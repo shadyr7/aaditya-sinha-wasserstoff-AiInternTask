@@ -6,6 +6,8 @@ import uuid # for generating session IDs
 from typing import List  # for history response
 #importing the redis connection getter
 from ..core.cache import get_redis_connection 
+from ..core.ai_client import generate_ai_verdict
+import asyncio 
 import redis.asyncio as redis 
 # Get a logger for this module
 logger = logging.getLogger(__name__)
@@ -108,30 +110,7 @@ async def get_session_history(redis_conn: redis.Redis, session_id: str) -> List[
      return guesses
 
 # --- AI Client Placeholder ---
-async def call_ai_validation(current_word: str, user_guess: str) -> bool:
-    """
-    Placeholder for the actual AI call.
-    Simulates AI validation logic.
-    """
-    logger.info(f"AI Placeholder: Validating if '{user_guess}' beats '{current_word}'")
-    # --- !!! REPLACE WITH ACTUAL AI CALL LATER !!! ---
-    # Simple placeholder logic for now:
-    if user_guess.lower() == "paper" and current_word.lower() == "rock":
-        verdict = True
-    elif user_guess.lower() == "scissors" and current_word.lower() == "paper":
-        verdict = True
-    elif user_guess.lower() == "rock" and current_word.lower() == "scissors":
-        verdict = True
-    elif len(user_guess) > len(current_word): # Arbitrary rule for testing
-         verdict = True
-    else:
-        verdict = False
-
-    logger.info(f"AI Placeholder: Verdict is {verdict}")
-    # Simulate some delay
-    # import asyncio
-    # await asyncio.sleep(0.1)
-    return verdict
+    
     # ----------------------------------------------------
 
 # --- Updated Guess Endpoint ---
@@ -194,7 +173,25 @@ async def submit_guess(
             )
 
     # --- AI Validation (Placeholder) ---
-    ai_says_yes = await call_ai_validation(current_word, user_guess)
+            # --- AI Validation (REAL CALL) ---
+        # Replace the placeholder call with the real one
+        try:
+            # Call the imported function from ai_client.py
+            ai_says_yes = await asyncio.wait_for(
+                generate_ai_verdict(current_word, user_guess),
+                timeout=15.0 # Example: 15 second timeout per attempt
+            )
+        except asyncio.TimeoutError:
+             logger.error(f"AI call timed out for '{user_guess}' vs '{current_word}'.")
+             ai_says_yes = False # Treat timeout as NO
+        except Exception as e:
+            # Catch any unexpected errors from the AI call not handled by tenacity's retry
+            # or other potential issues during the call.
+            logger.error(f"Unexpected error during AI verdict generation: {e}", exc_info=True)
+            ai_says_yes = False # Treat errors as NO
+
+        # --- Process Result ---
+        # The 'if ai_says_yes:' block below this uses the result
 
     # --- Process Result ---
     if ai_says_yes:
