@@ -16,8 +16,10 @@ from ..core.cache import get_redis_connection
 from ..core.ai_client import generate_ai_verdict
 import redis.asyncio as redis
 from ..core.db_client import increment_global_guess_count
+from ..core.moderation import is_guess_clean
 # --- End Core Logic Imports ---
-
+from enum import Enum 
+from fastapi import Query  
 # --- Setup ---
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/game", tags=["Game Logic"])
@@ -33,7 +35,9 @@ SESSION_TTL_SECONDS = 3600
 RATE_LIMIT_GUESS = "15/minute"
 RATE_LIMIT_HISTORY = "30/minute"
 # --- End Constants ---
-
+class Persona(str, Enum):
+    SERIOUS = "serious"
+    CHEERY = "cheery"
 # --- Pydantic Models ---
 class GuessInput(BaseModel):
     current_word: str = Field(..., examples=[INITIAL_WORD, "Paper"])
@@ -96,15 +100,44 @@ async def get_session_history(redis_conn: redis.Redis, session_id: str) -> List[
      session_list_key = f"{SESSION_KEY_PREFIX}{session_id}{SESSION_GUESSES_SUFFIX}"
      guesses = await redis_conn.lrange(session_list_key, 0, -1)
      return guesses
-# --- End Game Logic Helpers ---
+# --- Persona-based Message generation helpers ---
+def generate_success_message(persona:Persona, guess:str , current:str, count: int | None, session_id:str, is_new: bool) -> str:
+    base = f" '{guess}' beats '{current}'."
+    if count is not None:
+        base+= f"Global count for '{guess}':{count}."
+    if is_new:
+        base+= f"Your session ID is {session_id}."
+    if persona == Persona.CHEERY:
+        return f"Wowzers! 👏 {base} Good Stuff!"
+    return f"Affirmative. {base}"
+def generate_ai_fail_message(persona: Persona, guess: str, current: str, is_start: bool) -> str:
+    fail_base = f"AI thinks '{guess}' doesn't beat '{current}'."
+    if persona == Persona.CHEERY:
+        if is_start:
+            return f"Aw, man! 🥺 {fail_base} Game hasn't started. Try beating '{INITIAL_WORD}'!"
+        else:
+            return f"Oops! 🤭 {fail_base} Keep trying with '{current}'!"
+    # Default to SERIOUS
+    if is_start:
+         return f"Negative. {fail_base} Game not initiated. Attempt validation against '{INITIAL_WORD}'."
+    else:
+         return f"Negative. {fail_base} Maintain current word '{current}'."
 
+
+def generate_duplicate_message(persona: Persona, guess: str, score: int) -> str:
+    if persona == Persona.CHEERY:
+        return f"Yikes! 😅 You already used '{guess}'. Game over! Your  score was {score}!"
+    # Default to SERIOUS
+    return f"Duplicate entry: '{guess}'. Game terminated. Final score: {score}."
 
 # --- Core Game Endpoint ---
 # USE DECORATOR DIRECTLY ON ROUTE
 @router.post("/guess", response_model=GuessResponse)
 @limiter.limit(RATE_LIMIT_GUESS, key_func=key_func) # Apply decorator
 async def submit_guess(
+    
     request: Request, # Request param IS needed for key_func
+    persona: Persona = Query(Persona.SERIOUS, description="Select the host's persona(serious or cheery)"),
     guess_input: GuessInput = Body(...),
     redis_conn: redis.Redis = Depends(get_redis)
 ):
@@ -122,7 +155,11 @@ async def submit_guess(
 
     if not user_guess:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Guess cannot be empty.")
-
+    #-- moderation check --
+    if not is_guess_clean(user_guess):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Inappropriate language detected in guess. Please keep it clean!")
+    #--- End Moderation check ---
+    logger.info(f"Received guess (clean) : {user_guess} vs {current_word} (Session: {session_id_active}, Persona: {persona.value})")
     # --- Session Handling & Validation ---
     if session_id_active:
         session_score_key = f"{SESSION_KEY_PREFIX}{session_id_active}{SESSION_SCORE_SUFFIX}"
@@ -158,8 +195,9 @@ async def submit_guess(
         if is_duplicate:
             logger.info(f"Duplicate guess '{user_guess}' in session {session_id_active}. Game Over.")
             score = await get_session_score(redis_conn, session_id_active)
+            message = generate_duplicate_message(persona,user_guess,score)
             return GuessResponse(
-                message=f"Game Over! You already used '{user_guess}'. Final score: {score}",
+                message=message, 
                 score=score, game_over=True, session_id=session_id_active
             )
 
@@ -182,6 +220,7 @@ async def submit_guess(
         # --- Success Path ---
         if is_new_session or not session_id_active:
             session_id_active = str(uuid.uuid4())
+            is_new_session = True
             logger.info(f"Starting new session: {session_id_active}")
             await add_guess_to_session(redis_conn, session_id_active, INITIAL_WORD)
 
@@ -189,12 +228,7 @@ async def submit_guess(
         current_score = await increment_session_score(redis_conn, session_id_active)
         global_count = await increment_global_guess_count(user_guess)
 
-        message = f"Nice! '{user_guess}' beats '{current_word}'."
-        if global_count is not None:
-            message += f" Global count for '{user_guess}': {global_count}."
-        if is_new_session:
-             message += f" Your session ID is {session_id_active}."
-
+        message = generate_success_message(persona,user_guess,current_word,global_count,session_id_active,is_new_session)
         return GuessResponse(
             message=message, next_word=user_guess, score=current_score,
             game_over=False, session_id=session_id_active, global_count=global_count
@@ -203,11 +237,10 @@ async def submit_guess(
         # --- Failure Path ---
         score = await get_session_score(redis_conn, session_id_active) if session_id_active else 0
         next_word_on_fail = current_word
-        if not session_id_active:
-             message = f"AI thinks '{user_guess}' doesn't beat '{current_word}'. Game hasn't started. Try beating '{INITIAL_WORD}'."
-             next_word_on_fail = INITIAL_WORD
-        else:
-             message = f"AI thinks '{user_guess}' doesn't beat '{current_word}'. Keep trying with '{current_word}'!"
+        is_start_of_game = not session_id_active
+        if is_start_of_game:
+            next_word_on_fail = INITIAL_WORD
+        message = generate_ai_fail_message(persona,user_guess,current_word,is_start_of_game)
         return GuessResponse(
             message=message, next_word=next_word_on_fail, score=score,
             game_over=False, session_id=session_id_active
