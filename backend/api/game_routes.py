@@ -222,7 +222,7 @@ async def submit_guess(
             session_id_active = str(uuid.uuid4())
             is_new_session = True
             logger.info(f"Starting new session: {session_id_active}")
-            await add_guess_to_session(redis_conn, session_id_active, INITIAL_WORD)
+        #    await add_guess_to_session(redis_conn, session_id_active, INITIAL_WORD)
 
         await add_guess_to_session(redis_conn, session_id_active, user_guess)
         current_score = await increment_session_score(redis_conn, session_id_active)
