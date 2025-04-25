@@ -28,8 +28,8 @@ async def connect_db():
     # Determine connection DSN
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-         if database_url.startswith("postgresql://"):
-              database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    #     if database_url.startswith("postgresql://"):
+     #         database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
          dsn = database_url
          logger.info(f"Attempting DB connection using DATABASE_URL...")
     else:
