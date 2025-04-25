@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Beats Rock?</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <!-- Ensure this path matches how you serve static files in main.py -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body style="background-color: #1c1c1c; color: #e0e0e0;"> <!-- Consider moving styles to CSS file -->
+
+    <!-- Header Section -->
+    <header class="text-center py-4">
+        <div class="d-flex justify-content-center align-items-center mb-3">
+            <span style="font-size: 2rem; margin-right: 15px;">🎮</span>
+            <h1 class="fw-bold text-light mb-0" style="font-family: 'Bebas Neue', sans-serif; font-size: 3rem;">What Beats Rock?</h1>
+        </div>
+    </header>
+
+    <!-- Main Content Section - Game Area -->
+    <main class="container mt-4 text-center">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+
+                <!-- Game Status Display -->
+                <!-- Corrected Structure: icon area + message area INSIDE the status box -->
+                <div id="game-status" class="mb-3 p-3 rounded status-box text-start" style="min-height: 60px; display: flex; align-items: center;">
+                    <!-- Icon/Emoji Area -->
+                    <div id="status-icon-area" class="me-2" style="font-size: 1.5rem; width: 40px; text-align: center; flex-shrink: 0;">
+                         <!-- Icons/Emojis will appear here via CSS ::before -->
+                    </div>
+                    <!-- Message Area -->
+                    <div id="status-message-area" style="flex-grow: 1;">
+                        <span id="status-message">Loading game...</span>
+                    </div>
+                    <!-- Removed the duplicated spans from outside the main div -->
+                </div>
+                <!-- End Game Status Display -->
+
+
+                <!-- Current Word to Beat -->
+                <div class="mb-4">
+                    <h2 style="font-family: 'Poppins', sans-serif;">Current Word:</h2>
+                    <h1 id="current-word" class="display-4 fw-bold text-warning" style="font-family: 'Bebas Neue', sans-serif;">Rock</h1>
+                </div>
+
+                <!-- Guess Input Form -->
+                <form id="guess-form" class="mb-4">
+                    <div class="input-group input-group-lg">
+                        <input type="text" id="user-guess" class="form-control" placeholder="Enter word that beats it..." required autocomplete="off">
+                        <button type="submit" class="btn btn-primary fw-bold">Submit Guess</button>
+                    </div>
+                </form>
+
+                <!-- Score and Counters -->
+                <div class="row mb-4 text-start">
+                    <div class="col-6">
+                        <h5>Your Score: <span id="current-score" class="badge bg-success fs-5">0</span></h5>
+                    </div>
+                    <div class="col-6 text-end">
+                        <h5 title="Global count for the last successful guess">Global Count: <span id="global-count" class="badge bg-info fs-5">-</span></h5>
+                    </div>
+                </div>
+
+                <!-- Recent Guesses History -->
+                 <div class="text-start mb-3">
+                     <h5 class="mb-2">Your Recent Guesses:</h5>
+                     <ul id="guess-history" class="list-group list-group-flush" style="max-height: 150px; overflow-y: auto; background-color: #2a2a2a;">
+                         <li class="list-group-item" style="background-color: inherit; color: inherit; border-color: #444;">Game Started</li>
+                     </ul>
+                 </div>
+
+                 <!-- Persona Selector -->
+                 <div class="mb-3 text-start">
+                    <label for="persona-select" class="form-label">Host Persona:</label>
+                    <select class="form-select form-select-sm" id="persona-select" style="max-width: 150px;">
+                        <option value="serious" selected>Serious</option>
+                        <option value="cheery">Cheery</option>
+                    </select>
+                 </div>
+
+            </div> <!-- End col -->
+        </div> <!-- End row -->
+    </main>
+    <!-- End Main Content Section -->
+
+    <!-- Footer Section -->
+    <footer class="mt-5 py-3 text-center text-secondary">
+        <p>© 2024 AI Game Task</p>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <!-- Ensure this path matches how you serve static files in main.py -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

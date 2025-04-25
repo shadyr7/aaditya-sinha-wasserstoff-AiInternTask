@@ -24,7 +24,8 @@ from .core.cache import create_redis_pool, close_redis_pool, get_redis_connectio
 # Import only connect_db and close_db as we call them directly
 from .core.db_client import connect_db, close_db
 from starlette.responses import JSONResponse, Response
-
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 # --- Initialize Rate Limiter ---
 # Uses the Redis connection established in lifespan
 # limiter = Limiter(key_func=get_remote_address, storage_uri="memory://") # Temp storage, will use redis later
@@ -124,6 +125,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler) # Add
 app.include_router(game_routes.router)
 
 # --- Root Endpoint ---
+'''
 @app.get("/")
 async def read_root(request: Request):
     logger.info("Root endpoint accessed.")
@@ -141,6 +143,17 @@ async def read_root(request: Request):
         "redis_connected": redis_available,
         "db_connected": db_available
     }
+'''
+@app.get("/", response_class=FileResponse,include_in_schema=False)
+async def read_index():
+    # Ensure this path is correct relative to where you run uvicorn
+    # If you run uvicorn from the project root, this should work
+    return "frontend/templates/index.html"
+
+# --- Mount Static Files Directory ---
+# This serves files like styles.css, app.js from the frontend directory
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+
 
 # --- Direct Run Block (for testing) ---
 if __name__ == "__main__":

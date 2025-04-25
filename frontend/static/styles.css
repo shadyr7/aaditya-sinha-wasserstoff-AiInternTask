@@ -1,0 +1,159 @@
+/* frontend/styles.css */
+
+/* --- Base & Layout --- */
+body {
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #1c1c1c; /* Moved from inline style */
+    color: #e0e0e0; /* Default text color */
+}
+
+main {
+    flex-grow: 1; /* Allows main content to fill available space */
+}
+
+footer {
+    flex-shrink: 0; /* Prevent footer from shrinking */
+    background-color: #111; /* Slightly darker footer */
+    color: #aaa; /* Dimmer footer text */
+}
+
+/* --- Header --- */
+header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+}
+
+/* --- Game Area Specifics --- */
+#current-word {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+    transition: all 0.3s ease-in-out;
+    min-height: 1.2em; /* Prevent layout jump if text disappears */
+}
+
+#guess-form .form-control {
+    background-color: #333;
+    color: #e0e0e0;
+    border-color: #555;
+}
+#guess-form .form-control::placeholder {
+  color: #888;
+}
+#guess-form .form-control:focus {
+    background-color: #444;
+    color: #fff;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* --- Status Box Styling --- */
+.status-box {
+    background-color: #333;
+    border: 1px solid #555;
+    transition: all 0.3s ease;
+    opacity: 1;
+    font-weight: 500;
+    /* Ensure flex properties for icon/message alignment */
+    display: flex;
+    align-items: center;
+    min-height: 60px; /* Consistent height */
+}
+
+#status-icon-area {
+    font-size: 1.5rem; /* Size for the icon/emoji */
+    width: 40px; /* Fixed width for alignment */
+    text-align: center;
+    flex-shrink: 0; /* Prevent icon area from shrinking */
+}
+
+#status-message-area {
+    flex-grow: 1; /* Allow message to take remaining space */
+}
+
+/* Default/Info Style */
+.status-info {
+    background-color: #2a4a5a; /* Darker blue/teal */
+    border-color: #5394a8;
+    color: #cfe2ff;
+}
+.status-info #status-icon-area::before {
+    content: 'ℹ️';
+}
+
+/* Success Style */
+.status-success {
+    background-color: #2a5a34; /* Dark green */
+    border-color: #53a862;
+    color: #d1e7dd;
+}
+.status-success #status-icon-area::before {
+    content: '✅';
+    display: inline-block; /* Needed for animation */
+    animation: bounce 0.6s ease alternate infinite; /* Add bounce to success */
+}
+
+/* AI Fail Style */
+.status-ai-fail {
+    background-color: #5a4a2a; /* Dark orange/yellow */
+    border-color: #a89353;
+    color: #fff3cd;
+}
+.status-ai-fail #status-icon-area::before {
+    content: '🤔';
+}
+
+
+/* Game Over / Error Style */
+.status-game-over {
+    background-color: #5a2a2a; /* Dark red */
+    border-color: #a85353;
+    color: #f8d7da;
+}
+.status-game-over #status-icon-area::before {
+    content: '🛑';
+    display: inline-block; /* Needed for animation */
+    animation: shake 0.4s ease-in-out; /* Add shake to game over */
+}
+
+/* --- History & Counters --- */
+#guess-history {
+     border: 1px solid #444;
+     background-color: #2a2a2a; /* Background for the list */
+     max-height: 150px; /* Limit height and allow scroll */
+     overflow-y: auto;
+}
+
+#guess-history .list-group-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    background-color: inherit; /* Inherit from parent ul */
+    color: inherit; /* Inherit text color */
+    border-color: #444 !important; /* Ensure border overrides bootstrap */
+}
+
+#persona-select {
+    background-color: #333;
+    color: #e0e0e0;
+    border-color: #555;
+}
+
+/* --- Animations --- */
+@keyframes bounce {
+  from { transform: translateY(0px); }
+  to   { transform: translateY(-4px); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-3px); }
+}
+
+/* --- Optional Loading State --- */
+/* .status-box.loading {
+    opacity: 0.7;
+} */
