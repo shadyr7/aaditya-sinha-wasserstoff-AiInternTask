@@ -1,0 +1,50 @@
+# docker-compose.yml
+version: '3.8' # Specify docker-compose version
+
+services:
+  # --- Backend Service (FastAPI App) ---
+  backend:
+    build: . # Build the image from the Dockerfile in the current directory
+    container_name: genai-game-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # Map host port 8000 to container port 8000
+    # Removed 'volumes:' section as it was empty/commented out
+    env_file:
+      - .env # Load environment variables from .env file
+    depends_on:
+      - db   # Wait for db service to be ready (basic check)
+      - cache # Wait for cache service to be ready (basic check)
+    environment:
+      # Override specific variables for container-to-container communication
+      # Values in .env for these keys will be ignored IN THIS CONTAINER
+      - POSTGRES_HOST=db
+      - REDIS_HOST=cache
+      # Other variables like POSTGRES_USER, GEMINI_API_KEY etc., are loaded via env_file
+
+  # --- Database Service (PostgreSQL) ---
+  db:
+    image: postgres:15-alpine # Use the same PostgreSQL image
+    container_name: genai-game-db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persist data using a named volume
+    # ports: # If you don't need to access DB from host, keep ports commented/removed
+      # - "5432:5432"
+    env_file:
+      - .env # Load variables like POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB for DB init
+
+  # --- Cache Service (Redis) ---
+  cache:
+    image: redis:latest # Use the official Redis image
+    container_name: genai-game-cache
+    restart: unless-stopped
+    # ports: # If you don't need to access Redis from host, keep ports commented/removed
+      # - "6379:6379"
+    volumes:
+      - redis_data:/data # Persist Redis data
+
+# Define named volumes for data persistence
+volumes:
+  postgres_data:
+  redis_data:

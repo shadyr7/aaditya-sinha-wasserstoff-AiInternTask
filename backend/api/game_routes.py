@@ -108,7 +108,7 @@ def generate_success_message(persona:Persona, guess:str , current:str, count: in
     if is_new:
         base+= f"Your session ID is {session_id}."
     if persona == Persona.CHEERY:
-        return f"Wowzers! 👏 {base} Good Stuff!"
+        return f"Wowzers! 🎊 {base} Good Stuff!"
     return f"Affirmative. {base}"
 def generate_ai_fail_message(persona: Persona, guess: str, current: str, is_start: bool) -> str:
     fail_base = f"AI thinks '{guess}' doesn't beat '{current}'."
