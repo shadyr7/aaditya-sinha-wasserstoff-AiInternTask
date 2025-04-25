@@ -10,31 +10,41 @@ load_dotenv() # Load environment variables from .env file
 # --- Redis Connection Pool ---
 # Global variable to hold the connection pool
 # We initialize it to None and connect in the app lifespan
-redis_pool = None
+redis_pool: redis.ConnectionPool | None = None
 
 async def create_redis_pool():
     """Creates an async Redis connection pool."""
     global redis_pool
-    redis_host = os.getenv("REDIS_HOST", "localhost")
-    redis_port = int(os.getenv("REDIS_PORT", 6379))
-    redis_db = int(os.getenv("REDIS_DB", 0))
+    redis_url = os.getenv("REDIS_URL") # Check for combined URL first
+
+    if redis_url:
+        logger.info(f"Attempting to connect to Redis using REDIS_URL...")
+        redis_dsn = redis_url
+    else:
+        # Fallback to individual components
+        logger.warning("REDIS_URL not found, falling back to individual Redis vars.")
+        redis_host = os.getenv("REDIS_HOST", "localhost")
+        redis_port = int(os.getenv("REDIS_PORT", 6379))
+        redis_db = int(os.getenv("REDIS_DB", 0))
+        redis_dsn = f"redis://{redis_host}:{redis_port}/{redis_db}"
+        logger.info(f"Attempting to connect to Redis using individual vars at {redis_host}:{redis_port}...")
+
     try:
-        logger.info(f"Attempting to connect to Redis at {redis_host}:{redis_port}, DB: {redis_db}")
-        # decode_responses=True makes redis-py return strings instead of bytes
-        redis_pool = redis.ConnectionPool.from_url(
-            f"redis://{redis_host}:{redis_port}/{redis_db}",
+        pool = redis.ConnectionPool.from_url(
+            redis_dsn,
             decode_responses=True,
-            max_connections=20 # Configure max connections as needed
+            max_connections=20
         )
-        # Test connection
-        async with redis.Redis(connection_pool=redis_pool) as r:
+        async with redis.Redis(connection_pool=pool) as r:
             await r.ping()
+        redis_pool = pool
         logger.info("Successfully connected to Redis and pinged.")
         return redis_pool
     except Exception as e:
         logger.error(f"Failed to connect to Redis: {e}", exc_info=True)
-        # Depending on requirements, you might exit the app or run in a degraded mode
+        redis_pool = None
         raise ConnectionError("Could not connect to Redis") from e
+
 
 async def close_redis_pool():
     """Closes the Redis connection pool."""

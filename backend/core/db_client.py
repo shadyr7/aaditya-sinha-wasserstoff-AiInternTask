@@ -2,7 +2,7 @@
 import asyncpg
 import logging
 import socket # Import socket for specific error checking
-
+import os
 logger = logging.getLogger(__name__)
 
 # Global variable to hold the pool, accessible by other functions in this module
@@ -12,37 +12,46 @@ DB_POOL: asyncpg.Pool | None = None
 async def connect_db(db_user: str, db_password: str | None, db_name: str, db_host: str, db_port: int):
     """Creates an asyncpg connection pool using provided parameters and sets the global pool."""
     global DB_POOL # Declare modification of global variable
-
+    database_url = os.getenv("DATABASE_URL")
     # Construct DSN from arguments
-    dsn = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    logger.info(f"Attempting to connect to PostgreSQL at {db_host}:{db_port} using provided args...")
+    if database_url:
+        if database_url.startswith("postgresql://"):
+              database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        dsn = database_url
+        logger.info(f"Attempting to connect to PostgreSQL using DATABASE_URL...")
+    else:
+         # Fallback to individual components
+         logger.warning("DATABASE_URL not found, falling back to individual PG vars.")
+         db_user = os.getenv("POSTGRES_USER", "user")
+         db_password = os.getenv("POSTGRES_PASSWORD", "password")
+         db_name = os.getenv("POSTGRES_DB", "whatbeatsrock_db")
+         db_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+         db_port = int(os.getenv("POSTGRES_PORT", 5432))
+         dsn = f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+         logger.info(f"Attempting to connect to PostgreSQL using individual vars at {db_host}:{db_port}...")
 
     try:
-        pool = await asyncpg.create_pool(
-            dsn=dsn,
-            min_size=1,
-            max_size=10
-        )
-        # Test connection
+        pool = await asyncpg.create_pool(dsn=dsn, min_size=1, max_size=10)
         async with pool.acquire() as connection:
              await connection.execute("SELECT 1")
-
-        DB_POOL = pool # Assign to global variable on success
+        DB_POOL = pool
         logger.info("Successfully connected to PostgreSQL and set global pool.")
-        await setup_database_schema() # Create table using the now-set global pool
-        return DB_POOL # Return the pool as well (consistent with main.py's expectation)
+        await setup_database_schema()
+        return DB_POOL # Return pool
     except socket.gaierror as e:
-        logger.error(f"Failed to resolve hostname '{db_host}': {e}", exc_info=True)
-        DB_POOL = None # Ensure global pool is None on failure
-        raise ConnectionError(f"Could not resolve PostgreSQL host '{db_host}'") from e
+        logger.error(f"Failed to resolve hostname used in DSN: {e}", exc_info=True)
+        DB_POOL = None
+        raise ConnectionError(f"Could not resolve PostgreSQL host") from e
     except asyncpg.exceptions.InvalidPasswordError as e:
-        logger.error(f"Invalid PostgreSQL password for user '{db_user}'.")
+        logger.error(f"Invalid PostgreSQL password.")
         DB_POOL = None
         raise ConnectionError("Invalid PostgreSQL password") from e
     except Exception as e:
         logger.error(f"Failed to connect to PostgreSQL: {e}", exc_info=True)
         DB_POOL = None
         raise ConnectionError("Could not connect to PostgreSQL") from e
+
+
 
 async def close_db():
     """Closes the global asyncpg connection pool."""
