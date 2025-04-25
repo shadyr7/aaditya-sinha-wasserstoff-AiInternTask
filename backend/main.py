@@ -80,18 +80,20 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Attempting DB connection call...")
         # Pass loaded config explicitly to connect_db (expecting modified connect_db)
-        db_pool_instance = await connect_db(
+        db_pool_instance = await connect_db()
+        '''
             db_user=db_user_main,
             db_password=db_password_main,
             db_name=db_name_main,
             db_host=db_host_main,
             db_port=db_port_main
         )
+        '''
         # connect_db now sets the global DB_POOL used by other db functions
         setattr(app.state, 'db_pool', db_pool_instance) # Also store on app state if needed elsewhere directly
-        logger.info("DB pool should be created and attached to app state.")
+        logger.info("DB connection and setup schema successful.")
     except Exception as e:
-        logger.error(f"Database setup failed in main: {e}", exc_info=True)
+        logger.error(f"Database setup failed in main lifespan: {e}", exc_info=True)
         setattr(app.state, 'db_pool', None) # Ensure state reflects failure
 
     logger.info("--- Startup complete ---")
