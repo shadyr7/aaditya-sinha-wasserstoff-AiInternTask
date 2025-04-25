@@ -35,4 +35,4 @@ EXPOSE 8000
 # 8. Define Default Command
 # Run Uvicorn. Use 0.0.0.0 to listen on all interfaces inside the container.
 # Use --host 0.0.0.0 instead of 127.0.0.1
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
